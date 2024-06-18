@@ -1,5 +1,6 @@
 package com.picpaysimplificado.picpaysimplificado.services;
 
+import com.picpaysimplificado.picpaysimplificado.dtos.UserDTO;
 import com.picpaysimplificado.picpaysimplificado.model.user.User;
 import com.picpaysimplificado.picpaysimplificado.model.user.UserType;
 import com.picpaysimplificado.picpaysimplificado.repositories.UserRepository;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 public class UserService {
@@ -22,6 +24,16 @@ public class UserService {
         if (sender.getBalance().compareTo(amount) < 0) {
             throw new Exception("O saldo do usuário não é suficiente para completar a operação.");
         }
+    }
+
+    public User createUser(UserDTO user) {
+        User newUser = new User(user);
+        this.saveUser(newUser);
+        return newUser;
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 
     public User findUserById(Long id) throws Exception {

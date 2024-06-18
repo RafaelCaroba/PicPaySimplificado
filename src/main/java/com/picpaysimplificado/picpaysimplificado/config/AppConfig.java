@@ -6,6 +6,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.vendor.Database;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 
@@ -31,5 +32,10 @@ public class AppConfig {
         adapter.setPrepareConnection(true);
         adapter.setGenerateDdl(true);
         return adapter;
+    }
+
+    @Bean
+    public RestTemplate restTemplate(){
+        return new RestTemplate();
     }
 }
