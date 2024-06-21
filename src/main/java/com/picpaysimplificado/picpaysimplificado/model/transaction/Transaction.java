@@ -1,5 +1,6 @@
 package com.picpaysimplificado.picpaysimplificado.model.transaction;
 
+import com.picpaysimplificado.picpaysimplificado.dtos.TransactionDTO;
 import com.picpaysimplificado.picpaysimplificado.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,4 +28,11 @@ public class Transaction {
     @JoinColumn(name = "receiver_id")
     private User receiver;
     private LocalDateTime timestamp;
+
+    public Transaction(TransactionDTO data, User sender, User receiver) {
+        this.amount = data.value();
+        this.sender = sender;
+        this.receiver = receiver;
+        this.timestamp = LocalDateTime.now();
+    }
 }

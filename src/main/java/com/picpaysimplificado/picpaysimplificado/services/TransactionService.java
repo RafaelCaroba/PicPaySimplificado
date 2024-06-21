@@ -1,19 +1,16 @@
 package com.picpaysimplificado.picpaysimplificado.services;
 
 import com.picpaysimplificado.picpaysimplificado.dtos.TransactionDTO;
+import com.picpaysimplificado.picpaysimplificado.model.exception.TransactionAuthorizationException;
 import com.picpaysimplificado.picpaysimplificado.model.transaction.Transaction;
 import com.picpaysimplificado.picpaysimplificado.model.user.User;
 import com.picpaysimplificado.picpaysimplificado.repositories.TransactionRepository;
+import com.picpaysimplificado.picpaysimplificado.services.notification.NotificationService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class TransactionService {
@@ -25,39 +22,36 @@ public class TransactionService {
     private UserService userService;
 
     @Autowired
-    private RestTemplate restTemplate;
-
-    @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private AuhtorizationService auhtorizationService;
+
+    @Transactional
     public Transaction createTransaction(TransactionDTO transaction) throws Exception {
+        // Busca os usuários que enviam e recebem a transação
         User sender = userService.findUserById(transaction.senderId());
         User receiver = userService.findUserById(transaction.receiverId());
 
-        userService.validateTransaction(sender, transaction.value());
+        // Valida a transação
+        userService.validateTransaction(sender, receiver, transaction.value());
+        // Chama o mock de serviço externo para autorizar a transação
+        if (!auhtorizationService.authorizeTransaction(sender, transaction.value())){
+            throw new TransactionAuthorizationException("Transação não autorizada.");
+        }
 
-//        boolean isAuthorized = authorizeTransaction(sender, transaction.value());
-//        if (!isAuthorized){
-//            throw new Exception("Transação não autorizada.");
-//        }
-
-        Transaction newTransaction = new Transaction();
-        newTransaction.setAmount(transaction.value());
-        newTransaction.setSender(sender);
-        newTransaction.setReceiver(receiver);
-        newTransaction.setTimestamp(LocalDateTime.now());
-
+        Transaction newTransaction = new Transaction(transaction, sender, receiver);
         sender.setBalance(sender.getBalance().subtract(transaction.value()));
         receiver.setBalance(receiver.getBalance().add(transaction.value()));
-
         transactionRepository.save(newTransaction);
+
+        //ATUALIZANDO os Users envolvidos na transação
         userService.saveUser(sender);
         userService.saveUser(receiver);
 
-        notificationService.sendNotification(sender, "TRansação realizada com sucesso");
-
-        notificationService.sendNotification(receiver, "TRansação realizada com sucesso");
-
+        // Notifica os usuários envolvidos na transação
+//        notificationService.sendNotification(sender, "Transação realizada com sucesso");
+//        notificationService.sendNotification(receiver, "Transação realizada com sucesso");
         return newTransaction;
     }
 
@@ -65,15 +59,7 @@ public class TransactionService {
         return transactionRepository.findAll();
     }
 
-    public boolean authorizeTransaction(User sender, BigDecimal value) {
-        ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity(
-                "https://util.devi.tools/api/v2/authorize", Map.class);
 
-        if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
-            return (boolean) authorizationResponse.getBody().get("authorization");
-        }
-        return false;
-    }
 
 
 }
